@@ -495,7 +495,6 @@ if mode == "좌표 직접 입력":
     if input_text:
       try:
         coords = []
-        # 수정된 안전한 파싱: 공백/줄바꿈 기준으로 분리
         for p in input_text.split():
           if not p:
             continue
@@ -511,39 +510,38 @@ if mode == "좌표 직접 입력":
 elif mode == "인터랙티브 캔버스":
   st.subheader("🖱️ 방법 2: 캔버스에 별 그려서 찍기")
   st.write(
-      "아래 검은 도화지 위에 마우스로 동그라미를 그려"
-      " 별 위치를 표시해보세요!"
+      "아래 검은 도화지 위를 마우스로 별을 그려보세요!"
+      "별자리가 판별됩니다!"
   )
 
-  # 안정적인 circle 그리기로 변경
+  # 버튼 없이 클릭하는 순간 바로 반영되도록 설정한 캔버스
   canvas_result = st_canvas(
-      fill_color="rgb(255, 165, 0)",
-      stroke_width=2,
-      stroke_color="#FFFFFF",
+      fill_color="#FFA500",
+      stroke_width=10,
+      stroke_color="#FFA500",
       background_color="#0E1117",
       height=400,
       width=400,
-      drawing_mode="circle",
-      key="star_canvas",
+      drawing_mode="point",
+      key="star_canvas_auto",
   )
 
   if canvas_result.json_data is not None:
     objects = canvas_result.json_data["objects"]
     canvas_stars = []
     for obj in objects:
-      if obj["type"] == "circle":
-        cx = obj["left"]
-        cy = obj["top"]
-        nx = (cx - 200) / 200.0
-        ny = -(cy - 200) / 200.0
-        canvas_stars.append((nx, ny))
+      cx = obj.get("left", 0)
+      cy = obj.get("top", 0)
+      nx = (cx - 200) / 200.0
+      ny = -(cy - 200) / 200.0
+      canvas_stars.append((nx, ny))
 
     if canvas_stars:
       st.info(
-          f"✨ 도화지에서 총 **{len(canvas_stars)}개**의 별을 감지했습니다!"
+          f"✨ 도화지에서 총 **{len(canvas_stars)}개**의 별을 감지하여"
+          " 자동으로 판별합니다!"
       )
-      if st.button("이 별들로 별자리 판별하기"):
-        user_stars = canvas_stars
+      user_stars = canvas_stars
 
 elif mode == "사진 업로드":
   st.subheader("🖼️ 방법 3: 사진 업로드 및 분석")
