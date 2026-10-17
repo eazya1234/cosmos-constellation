@@ -433,10 +433,6 @@ def normalize_stars(stars):
 
 
 def predict_constellation(user_stars):
-  """별의 개수가 완벽히 안 맞거나 대충 비슷해도(약 80% 유사도)
-
-  가장 가까운 형태의 별자리를 찾아내도록 유연하게 개선된 매칭 함수
-  """
   if not user_stars:
     return None, float("inf")
 
@@ -447,13 +443,11 @@ def predict_constellation(user_stars):
   for name, db_coords in constellation_db.items():
     db_norm = normalize_stars(db_coords)
 
-    # 개수 제한(엄격한 길이 비교)을 없애고, 각 사용자 별에서 가장 가까운 DB 별까지의 거리 합산
     total_dist = 0
     for u in user_norm:
       closest_dist = min(math.hypot(u[0] - d[0], u[1] - d[1]) for d in db_norm)
       total_dist += closest_dist
 
-    # 평균 오차 계산
     avg_error = total_dist / len(user_norm)
 
     if avg_error < min_error:
@@ -480,27 +474,31 @@ st.sidebar.header("🕹️ 입력 방식 선택")
 mode = st.sidebar.radio(
     "원하는 방식을 고르세요:",
     (
-        "좌표 직접 입력 (스마트 파싱)",
-        "인터랙티브 캔버스 (마우스로 점 찍기)",
-        "손그림 사진 업로드",
+        "좌표 직접 입력",
+        "인터랙티브 캔버스",
+        "사진 업로드",
     ),
     index=default_index,
 )
 
 user_stars = []
 
-if mode == "좌표 직접 입력 (스마트 파싱)":
+if mode == "좌표 직접 입력":
   st.subheader("📝 방법 1: 좌표 직접 입력하기")
   st.write(
-      "쉼표 양쪽에 띄어쓰기가 있어도(-1.0 , -0.2) 알아서 찰떡같이 인식합니다!"
+      "아래 형식에 맞게 좌표를 입력해주세요."
+      " 자세한 좌표평면은 홈페이지에서 확인 가능합니다!"
   )
-  st.write("형식 예시: `-1.0,-0.2 -0.3,0.1 0.4,0.3 0.9,-0.1`")
+  st.write("형식 예시: `-1.0,-0.2 0.4,0.3`")
   input_text = st.text_area("별들의 좌표를 입력하세요:")
   if st.button("별자리 판별하기"):
     if input_text:
       try:
         coords = []
-        for p in input_text.replace(" ", "").split():
+        # 수정된 안전한 파싱: 공백/줄바꿈 기준으로 분리
+        for p in input_text.split():
+          if not p:
+            continue
           x, y = map(float, p.split(","))
           coords.append((x, y))
         user_stars = coords
@@ -510,21 +508,22 @@ if mode == "좌표 직접 입력 (스마트 파싱)":
             f" 입력해주세요): {err}"
         )
 
-elif mode == "인터랙티브 캔버스 (마우스로 점 찍기)":
-  st.subheader("🖱️ 방법 2: 캔버스에 마우스로 별 찍기")
+elif mode == "인터랙티브 캔버스":
+  st.subheader("🖱️ 방법 2: 캔버스에 별 그려서 찍기")
   st.write(
-      "아래 검은 도화지 위에 마우스 클릭으로 별들의 위치를 콕콕"
-      " 찍어보세요! (점 모드 활성화)"
+      "아래 검은 도화지 위에 마우스로 동그라미를 그려"
+      " 별 위치를 표시해보세요!"
   )
 
+  # 안정적인 circle 그리기로 변경
   canvas_result = st_canvas(
       fill_color="rgb(255, 165, 0)",
-      stroke_width=3,
+      stroke_width=2,
       stroke_color="#FFFFFF",
       background_color="#0E1117",
       height=400,
       width=400,
-      drawing_mode="point",
+      drawing_mode="circle",
       key="star_canvas",
   )
 
@@ -546,14 +545,14 @@ elif mode == "인터랙티브 캔버스 (마우스로 점 찍기)":
       if st.button("이 별들로 별자리 판별하기"):
         user_stars = canvas_stars
 
-elif mode == "손그림 사진 업로드":
-  st.subheader("🖼️ 방법 3: 손그림 사진 업로드 및 분석")
+elif mode == "사진 업로드":
+  st.subheader("🖼️ 방법 3: 사진 업로드 및 분석")
   uploaded_file = st.file_uploader(
       "별자리를 그린 이미지를 업로드하세요 (JPG, PNG)", type=["jpg", "jpeg", "png"]
   )
   if uploaded_file is not None:
     st.image(
-        uploaded_file, caption="업로드한 손그림", use_container_width=True
+        uploaded_file, caption="업로드한 사진", use_container_width=True
     )
     if st.button("사진 분석 및 별자리 찾기"):
       try:
