@@ -414,7 +414,7 @@ constellation_info_db = {
             " 밝은 별이 거의 없다. 황도 12궁 중에서 천칭자리, 게자리와 함께 가장"
             " 찾기 어려운 어두운 별자리 중 하나이다. 두 줄기가 만나는 꺾쇠 모양"
             " 부근을 제외하면 전체적으로 별빛이 희미해 도심에서는 육안으로"
-            " 관측하기가 매우 까다로울 수 있다."
+            " 관측하기가 매우 까다롭다."
         ),
     },
 }
@@ -433,21 +433,33 @@ def normalize_stars(stars):
 
 
 def predict_constellation(user_stars):
+  """별의 개수가 완벽히 안 맞거나 대충 비슷해도(약 80% 유사도)
+
+  가장 가까운 형태의 별자리를 찾아내도록 유연하게 개선된 매칭 함수
+  """
+  if not user_stars:
+    return None, float("inf")
+
   user_norm = normalize_stars(user_stars)
   best_match = None
   min_error = float("inf")
+
   for name, db_coords in constellation_db.items():
     db_norm = normalize_stars(db_coords)
-    if len(user_norm) != len(db_norm):
-      continue
-    user_norm.sort(key=lambda p: (p[0], p[1]))
-    db_norm.sort(key=lambda p: (p[0], p[1]))
-    error = sum(
-        math.hypot(u[0] - d[0], u[1] - d[1]) for u, d in zip(user_norm, db_norm)
-    )
-    if error < min_error:
-      min_error = error
+
+    # 개수 제한(엄격한 길이 비교)을 없애고, 각 사용자 별에서 가장 가까운 DB 별까지의 거리 합산
+    total_dist = 0
+    for u in user_norm:
+      closest_dist = min(math.hypot(u[0] - d[0], u[1] - d[1]) for d in db_norm)
+      total_dist += closest_dist
+
+    # 평균 오차 계산
+    avg_error = total_dist / len(user_norm)
+
+    if avg_error < min_error:
+      min_error = avg_error
       best_match = name
+
   return best_match, min_error
 
 
@@ -505,7 +517,6 @@ elif mode == "인터랙티브 캔버스 (마우스로 점 찍기)":
       " 찍어보세요! (점 모드 활성화)"
   )
 
-  # Drawable Canvas 설정 (크기 400x400, 점 찍기 모드)
   canvas_result = st_canvas(
       fill_color="rgb(255, 165, 0)",
       stroke_width=3,
@@ -514,7 +525,6 @@ elif mode == "인터랙티브 캔버스 (마우스로 점 찍기)":
       height=400,
       width=400,
       drawing_mode="point",
-      point_radius=6,
       key="star_canvas",
   )
 
@@ -523,11 +533,10 @@ elif mode == "인터랙티브 캔버스 (마우스로 점 찍기)":
     canvas_stars = []
     for obj in objects:
       if obj["type"] == "circle":
-        # 캔버스 좌표(0~400)를 -1.0 ~ 1.0 범위로 변환
         cx = obj["left"]
         cy = obj["top"]
         nx = (cx - 200) / 200.0
-        ny = -(cy - 200) / 200.0  # y축 방향 반전 (웹 좌표계 특성 고려)
+        ny = -(cy - 200) / 200.0
         canvas_stars.append((nx, ny))
 
     if canvas_stars:
