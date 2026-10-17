@@ -2,6 +2,7 @@ import math
 from PIL import Image
 import numpy as np
 import streamlit as st
+from streamlit_drawable_canvas import st_canvas
 
 st.set_page_config(
     page_title="황도 12궁 패턴 인식", page_icon="✨", layout="centered"
@@ -413,7 +414,7 @@ constellation_info_db = {
             " 밝은 별이 거의 없다. 황도 12궁 중에서 천칭자리, 게자리와 함께 가장"
             " 찾기 어려운 어두운 별자리 중 하나이다. 두 줄기가 만나는 꺾쇠 모양"
             " 부근을 제외하면 전체적으로 별빛이 희미해 도심에서는 육안으로"
-            " 관측하기가 매우 까다롭다."
+            " 관측하기가 매우 까다로울 수 있다."
         ),
     },
 }
@@ -466,48 +467,75 @@ elif selected_mode_from_url == "3":
 st.sidebar.header("🕹️ 입력 방식 선택")
 mode = st.sidebar.radio(
     "원하는 방식을 고르세요:",
-    ("좌표 직접 입력", "인터랙티브 캔버스 (클릭)", "손그림 사진 업로드"),
+    (
+        "좌표 직접 입력 (스마트 파싱)",
+        "인터랙티브 캔버스 (마우스로 점 찍기)",
+        "손그림 사진 업로드",
+    ),
     index=default_index,
 )
 
 user_stars = []
 
-if mode == "좌표 직접 입력":
+if mode == "좌표 직접 입력 (스마트 파싱)":
   st.subheader("📝 방법 1: 좌표 직접 입력하기")
   st.write(
-      "예시 형식: `-1.0,-0.2 -0.3,0.1 0.4,0.3 0.9,-0.1` (띄어쓰기로 구분)"
+      "쉼표 양쪽에 띄어쓰기가 있어도(-1.0 , -0.2) 알아서 찰떡같이 인식합니다!"
   )
+  st.write("형식 예시: `-1.0,-0.2 -0.3,0.1 0.4,0.3 0.9,-0.1`")
   input_text = st.text_area("별들의 좌표를 입력하세요:")
   if st.button("별자리 판별하기"):
     if input_text:
       try:
         coords = []
-        for pair in input_text.split():
-          x, y = map(float, pair.split(","))
+        for p in input_text.replace(" ", "").split():
+          x, y = map(float, p.split(","))
           coords.append((x, y))
         user_stars = coords
-      except Exception as e:
-        st.error(f"입력 형식이 잘못되었습니다: {e}")
+      except Exception as err:
+        st.error(
+            f"입력 형식이 잘못되었습니다. (예: -1.0,-0.2 0.4,0.3 형식으로"
+            f" 입력해주세요): {err}"
+        )
 
-elif mode == "인터랙티브 캔버스 (클릭)":
-  st.subheader("🖱️ 방법 2: 화면 클릭 좌표 시뮬레이션")
+elif mode == "인터랙티브 캔버스 (마우스로 점 찍기)":
+  st.subheader("🖱️ 방법 2: 캔버스에 마우스로 별 찍기")
   st.write(
-      "웹 화면 특성상 마우스로 직접 찍는 대신, 아래 칸에 좌표를 점 찍듯"
-      " 입력하거나 예시를 테스트할 수 있습니다."
+      "아래 검은 도화지 위에 마우스 클릭으로 별들의 위치를 콕콕"
+      " 찍어보세요! (점 모드 활성화)"
   )
-  click_input = st.text_area(
-      "클릭할 별들의 좌표를 입력하세요 (예: 0.0,0.5 0.5,0.5...):"
+
+  # Drawable Canvas 설정 (크기 400x400, 점 찍기 모드)
+  canvas_result = st_canvas(
+      fill_color="rgb(255, 165, 0)",
+      stroke_width=3,
+      stroke_color="#FFFFFF",
+      background_color="#0E1117",
+      height=400,
+      width=400,
+      drawing_mode="point",
+      point_radius=6,
+      key="star_canvas",
   )
-  if st.button("캔버스 별자리 판별"):
-    if click_input:
-      try:
-        coords = []
-        for pair in click_input.split():
-          x, y = map(float, pair.split(","))
-          coords.append((x, y))
-        user_stars = coords
-      except Exception as e:
-        st.error(f"입력 형식 오류: {e}")
+
+  if canvas_result.json_data is not None:
+    objects = canvas_result.json_data["objects"]
+    canvas_stars = []
+    for obj in objects:
+      if obj["type"] == "circle":
+        # 캔버스 좌표(0~400)를 -1.0 ~ 1.0 범위로 변환
+        cx = obj["left"]
+        cy = obj["top"]
+        nx = (cx - 200) / 200.0
+        ny = -(cy - 200) / 200.0  # y축 방향 반전 (웹 좌표계 특성 고려)
+        canvas_stars.append((nx, ny))
+
+    if canvas_stars:
+      st.info(
+          f"✨ 도화지에서 총 **{len(canvas_stars)}개**의 별을 감지했습니다!"
+      )
+      if st.button("이 별들로 별자리 판별하기"):
+        user_stars = canvas_stars
 
 elif mode == "손그림 사진 업로드":
   st.subheader("🖼️ 방법 3: 손그림 사진 업로드 및 분석")
