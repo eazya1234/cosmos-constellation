@@ -12,6 +12,19 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# 📱 모바일/패드 캔버스 터치 스크롤 방지 및 터치 인식 최적화 CSS 주입
+st.markdown(
+    """
+    <style>
+    canvas {
+        touch-action: none !important;
+        -webkit-touch-callout: none !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 # 1. 황도 12궁 좌표 데이터베이스
 constellation_db = {
     "양자리 (Aries)": [(-1.0, -0.2), (-0.3, 0.1), (0.4, 0.3), (0.9, -0.1)],
@@ -580,7 +593,7 @@ elif mode == "좌표 직접 입력":
             f" 입력해주세요): {err}"
         )
 
-# --- 2. 인터랙티브 캔버스 (모바일/터치 스크린 최적화) ---
+# --- 2. 인터랙티브 캔버스 (모바일 터치 스크롤 방지 및 반응형 최적화) ---
 elif mode == "인터랙티브 캔버스":
   st.subheader("방법 2: 캔버스에 별 그려서 찍기")
   st.write(
@@ -616,7 +629,7 @@ elif mode == "인터랙티브 캔버스":
       )
       user_stars = canvas_stars
 
-# --- 3. 사진 업로드 ---
+# --- 3. 사진 업로드 (점선 노이즈 필터링 적용) ---
 elif mode == "사진 업로드":
   st.subheader("방법 3: 사진 업로드 및 분석")
   uploaded_file = st.file_uploader(
@@ -630,13 +643,41 @@ elif mode == "사진 업로드":
       try:
         image = Image.open(uploaded_file).convert("L").resize((150, 150))
         img_np = np.array(image)
+
         ys, xs = np.where(img_np > 200)
-        stars = []
-        for x, y in zip(xs, ys):
-          if not any(math.hypot(x - s[0], y - s[1]) < 15 for s in stars):
-            stars.append((float(x), float(y)))
-        user_stars = stars[:12]
-        st.info(f"🔍 이미지에서 총 {len(user_stars)}개의 별을 감지했습니다!")
+
+        star_pixels = []
+        for y, x in zip(ys, xs):
+          has_n = np.any(img_np[max(0, y - 5) : y, x] > 200)
+          has_s = np.any(img_np[y + 1 : min(img_np.shape[0], y + 6), x] > 200)
+          has_e = np.any(img_np[y, x + 1 : min(img_np.shape[1], x + 6)] > 200)
+          has_w = np.any(img_np[y, max(0, x - 5) : x] > 200)
+
+          if int(has_n) + int(has_s) + int(has_e) + int(has_w) >= 3:
+            star_pixels.append((float(x), float(y)))
+
+        clustered_stars = []
+        for x, y in star_pixels:
+          matched = False
+          for i, (cx, cy) in enumerate(clustered_stars):
+            if math.hypot(x - cx, y - cy) < 18:
+              clustered_stars[i] = ((cx + x) / 2, (cy + y) / 2)
+              matched = True
+              break
+          if not matched:
+            clustered_stars.append((x, y))
+
+        final_stars = []
+        for x, y in clustered_stars:
+          nx = (x - 75.0) / 75.0
+          ny = -((y - 75.0) / 75.0)
+          final_stars.append((nx, ny))
+
+        user_stars = final_stars
+        st.info(
+            f"🔍 총 **{len(user_stars)}개**의"
+            " 별을 정확하게 감지했습니다!"
+        )
       except Exception as e:
         st.error(f"이미지 처리 중 오류 발생: {e}")
 
