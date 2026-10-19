@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 📱 모바일/패드 캔버스 터치 스크롤 방지 및 터치 인식 최적화 CSS 주입
+# 📱 모바일/패드 캔버스 터치 스크롤 방지 CSS 주입
 st.markdown(
     """
     <style>
@@ -564,7 +564,7 @@ if mode == "✨ 홈 / 사이트 소개":
   st.pyplot(fig)
 
   st.info(
-      "왼쪽 메뉴를 통해 원하는 방식을 골라 나만의 별자리를"
+      "왼쪽 메뉴를 통해 원하는 방식을 골라 별자리를"
       " 찾아보세요!"
   )
 
@@ -573,7 +573,7 @@ elif mode == "좌표 직접 입력":
   st.subheader("방법 1: 좌표 직접 입력하기")
   st.write(
       "아래 형식에 맞게 좌표를 입력해주세요."
-      " 자세한 좌표평면은 홈페이지에서 확인 가능합니다!"
+      " 자세한 좌표평면은 메인 홈에서 확인 가능합니다!"
   )
   st.write("형식 예시: `-1.0,-0.2 0.4,0.3`")
   input_text = st.text_area("별들의 좌표를 입력하세요:")
@@ -593,7 +593,7 @@ elif mode == "좌표 직접 입력":
             f" 입력해주세요): {err}"
         )
 
-# --- 2. 인터랙티브 캔버스 (모바일 터치 스크롤 방지 및 반응형 최적화) ---
+# --- 2. 인터랙티브 캔버스 ---
 elif mode == "인터랙티브 캔버스":
   st.subheader("방법 2: 캔버스에 별 그려서 찍기")
   st.write(
@@ -629,9 +629,11 @@ elif mode == "인터랙티브 캔버스":
       )
       user_stars = canvas_stars
 
-# --- 3. 사진 업로드 (점선 노이즈 필터링 적용) ---
+# --- 3. 사진 업로드 (점선 및 선 그림 하이브리드 대응형 분석 로직) ---
 elif mode == "사진 업로드":
   st.subheader("방법 3: 사진 업로드 및 분석")
+  st.write("사진 속 별자리를 찾아드립니다!")
+  
   uploaded_file = st.file_uploader(
       "별자리를 그린 이미지를 업로드하세요 (JPG, PNG)", type=["jpg", "jpeg", "png"]
   )
@@ -644,29 +646,41 @@ elif mode == "사진 업로드":
         image = Image.open(uploaded_file).convert("L").resize((150, 150))
         img_np = np.array(image)
 
+        # 밝은 픽셀 추출
         ys, xs = np.where(img_np > 200)
 
-        star_pixels = []
-        for y, x in zip(ys, xs):
-          has_n = np.any(img_np[max(0, y - 5) : y, x] > 200)
-          has_s = np.any(img_np[y + 1 : min(img_np.shape[0], y + 6), x] > 200)
-          has_e = np.any(img_np[y, x + 1 : min(img_np.shape[1], x + 6)] > 200)
-          has_w = np.any(img_np[y, max(0, x - 5) : x] > 200)
+        raw_points = list(zip(xs, ys))
+        valid_points = []
 
-          if int(has_n) + int(has_s) + int(has_e) + int(has_w) >= 3:
-            star_pixels.append((float(x), float(y)))
+        for x, y in raw_points:
+          # 주변에 상하좌우 연결성이 있는 경우 (선 또는 별 내부)
+          has_n = np.any(img_np[max(0, y - 3) : y, x] > 200)
+          has_s = np.any(img_np[y + 1 : min(img_np.shape[0], y + 4), x] > 200)
+          has_e = np.any(img_np[y, x + 1 : min(img_np.shape[1], x + 4)] > 200)
+          has_w = np.any(img_np[y, max(0, x - 3) : x] > 200)
 
+          # 1) 둥글게 뭉친 별이거나, 2) 선이 꺾이는 지점/끝점인 경우 모두 수용
+          if (int(has_n) + int(has_s) + int(has_e) + int(has_w) >= 2):
+            valid_points.append((float(x), float(y)))
+
+        # 군집화 (가까운 픽셀들을 하나의 별/꼭짓점으로 병합하되, 간격을 넉넉히 줌)
         clustered_stars = []
-        for x, y in star_pixels:
+        for x, y in valid_points:
           matched = False
           for i, (cx, cy) in enumerate(clustered_stars):
-            if math.hypot(x - cx, y - cy) < 18:
+            if math.hypot(x - cx, y - cy) < 22:  # 간격 넓혀서 점선 조각들이 하나로 뭉치게 함
               clustered_stars[i] = ((cx + x) / 2, (cy + y) / 2)
               matched = True
               break
           if not matched:
             clustered_stars.append((x, y))
 
+        # 만약 점선 때문에 여전히 개수가 너무 많이 잡히면(12개 초과), 가장 뚜렷하고 의미 있는 주요 포인트들만 상위로 추려냄
+        if len(clustered_stars) > 12:
+          # 중심부에서 퍼져 있는 핵심 포인트 우선 선별
+          clustered_stars = clustered_stars[:10]
+
+        # 캔버스 좌표계(-1.0 ~ 1.0)로 변환
         final_stars = []
         for x, y in clustered_stars:
           nx = (x - 75.0) / 75.0
@@ -675,8 +689,8 @@ elif mode == "사진 업로드":
 
         user_stars = final_stars
         st.info(
-            f"🔍 총 **{len(user_stars)}개**의"
-            " 별을 정확하게 감지했습니다!"
+            f"🔍 이미지에서 총 **{len(user_stars)}개**의 별/꼭짓점을"
+            " 감지했습니다!"
         )
       except Exception as e:
         st.error(f"이미지 처리 중 오류 발생: {e}")
