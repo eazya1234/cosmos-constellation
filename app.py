@@ -6,7 +6,10 @@ import streamlit as st
 from streamlit_drawable_canvas import st_canvas
 
 st.set_page_config(
-    page_title="황도 12궁 패턴 인식", page_icon="✨", layout="centered"
+    page_title="황도 12궁 패턴 인식",
+    page_icon="✨",
+    layout="centered",
+    initial_sidebar_state="expanded",  # 모바일 접속 시 메뉴바를 찾기 쉽게 설정
 )
 
 # 1. 황도 12궁 좌표 데이터베이스
@@ -441,13 +444,11 @@ def predict_constellation(user_stars):
   best_match = None
   min_error = float("inf")
 
-  # 타이트한 판정을 위한 오차 임계값 (이 값을 낮추면 더 엄격하게 판별함)
   ERROR_THRESHOLD = 0.35
 
   for name, db_coords in constellation_db.items():
     db_norm = normalize_stars(db_coords)
 
-    # 별 개수가 다를 경우 오차에 페널티 부여 (개수 차이당 대폭 가산)
     count_diff = abs(len(user_norm) - len(db_norm))
 
     total_dist = 0
@@ -455,14 +456,12 @@ def predict_constellation(user_stars):
       closest_dist = min(math.hypot(u[0] - d[0], u[1] - d[1]) for d in db_norm)
       total_dist += closest_dist
 
-    # 평균 거리 오차 + 개수 불일치 페널티
     avg_error = (total_dist / len(user_norm)) + (count_diff * 0.2)
 
     if avg_error < min_error:
       min_error = avg_error
       best_match = name
 
-  # 오차가 너무 크면(정확도가 떨어지면) 일치하는 별자리가 없는 것으로 처리
   if min_error > ERROR_THRESHOLD:
     return None, min_error
 
@@ -498,7 +497,7 @@ mode = st.sidebar.radio(
 
 user_stars = []
 
-# --- 0. 홈 / 사이트 소개 페이지 (깔끔한 원형 마커 + 좌표 표시 + 이용 방법) ---
+# --- 0. 홈 / 사이트 소개 페이지 ---
 if mode == "✨ 홈 / 사이트 소개":
   st.title("🌌 cosmos_finding constellations")
   st.markdown(
@@ -508,22 +507,19 @@ if mode == "✨ 홈 / 사이트 소개":
 
   st.divider()
 
-  # 사이트 이용 방법 간결하게 추가
   st.markdown("사이트 이용 방법")
   st.markdown("""
     1. **좌표 직접 입력**: 별들의 $(x, y)$ 좌표를 띄어쓰기로 직접 입력하여 판별합니다.
-    2. **인터랙티브 캔버스**: 캔버스 화면에 마우스로 별을 직접 찍어 실시간으로 확인합니다.
+    2. **인터랙티브 캔버스**: 캔버스 화면에 마우스나 터치로 별을 직접 찍어 실시간으로 확인합니다.
     3. **사진 업로드**: 별자리를 그린 손그림 이미지를 업로드하여 자동으로 분석합니다.
     """)
 
   st.divider()
   st.markdown("황도 12궁 별 좌표 지도")
 
-  # 2번 이미지 스타일: 선 없이 원 모양(o) 포인트와 좌표만 깔끔하게 표시
   fig, ax = plt.subplots(figsize=(7, 7), facecolor="#0E1117")
   ax.set_facecolor("#0E1117")
 
-  # 모든 고유 좌표 수집
   all_stars = set()
   for name, coords in constellation_db.items():
     for p in coords:
@@ -532,10 +528,8 @@ if mode == "✨ 홈 / 사이트 소개":
   xs = [p[0] for p in all_stars]
   ys = [p[1] for p in all_stars]
 
-  # 원 모양 마커로 점 찍기
   ax.scatter(xs, ys, marker="o", color="white", s=80, edgecolors="#88bbff")
 
-  # 각 좌표 옆에 (x, y) 텍스트 표시
   for x, y in all_stars:
     ax.text(
         x + 0.02,
@@ -586,21 +580,21 @@ elif mode == "좌표 직접 입력":
             f" 입력해주세요): {err}"
         )
 
-# --- 2. 인터랙티브 캔버스 ---
+# --- 2. 인터랙티브 캔버스 (모바일/터치 스크린에 맞게 마커 stroke_width 최적화) ---
 elif mode == "인터랙티브 캔버스":
   st.subheader("방법 2: 캔버스에 별 그려서 찍기")
   st.write(
-      "아래 검은 도화지 위를 마우스로 별을 그려보세요!"
+      "아래 검은 도화지 위를 터치하거나 마우스로 별을 찍어보세요!"
       " 별자리가 판별됩니다!"
   )
 
   canvas_result = st_canvas(
       fill_color="#FFA500",
-      stroke_width=10,
+      stroke_width=12,  # 손가락 터치 시에도 선명하게 잘 찍히도록 두께 약간 상향
       stroke_color="#FFA500",
       background_color="#0E1117",
-      height=400,
-      width=400,
+      height=380,  # 모바일 화면 비율 고려
+      width=380,  # 모바일 화면 비율 고려
       drawing_mode="point",
       key="star_canvas_auto",
   )
@@ -611,8 +605,9 @@ elif mode == "인터랙티브 캔버스":
     for obj in objects:
       cx = obj.get("left", 0)
       cy = obj.get("top", 0)
-      nx = (cx - 200) / 200.0
-      ny = -(cy - 200) / 200.0
+      # 380px 규격에 맞춰 좌표 정규화
+      nx = (cx - 190) / 190.0
+      ny = -(cy - 190) / 190.0
       canvas_stars.append((nx, ny))
 
     if canvas_stars:
