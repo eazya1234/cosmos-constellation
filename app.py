@@ -1,5 +1,6 @@
 import math
 from PIL import Image
+import matplotlib.pyplot as plt
 import numpy as np
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
@@ -457,23 +458,26 @@ def predict_constellation(user_stars):
   return best_match, min_error
 
 
-# --- URL 파라미터 읽기 ---
+# --- URL 파라미터 읽기 (mode=0: 홈, mode=1,2,3: 기존 기능) ---
 try:
   query_params = st.query_params
-  selected_mode_from_url = query_params.get("mode", "1")
+  selected_mode_from_url = query_params.get("mode", "0")
 except Exception:
-  selected_mode_from_url = "1"
+  selected_mode_from_url = "0"
 
 default_index = 0
-if selected_mode_from_url == "2":
+if selected_mode_from_url == "1":
   default_index = 1
-elif selected_mode_from_url == "3":
+elif selected_mode_from_url == "2":
   default_index = 2
+elif selected_mode_from_url == "3":
+  default_index = 3
 
-st.sidebar.header("🕹️ 입력 방식 선택")
+st.sidebar.header("🕹️ 메뉴 선택")
 mode = st.sidebar.radio(
-    "원하는 방식을 고르세요:",
+    "원하는 페이지를 고르세요:",
     (
+        "✨ 홈 / 사이트 소개",
         "좌표 직접 입력",
         "인터랙티브 캔버스",
         "사진 업로드",
@@ -483,7 +487,62 @@ mode = st.sidebar.radio(
 
 user_stars = []
 
-if mode == "좌표 직접 입력":
+# --- 0. 홈 / 사이트 소개 페이지 (실시간 그래프 생성 방식) ---
+if mode == "✨ 홈 / 사이트 소개":
+  st.title("🌌 cosmos_finding constellations")
+  st.subheader("밤하늘의 별자리 패턴을 찾고 탐색하는 공간입니다.")
+
+  st.write("""
+    **cosmos** 프로젝트는 황도 12궁 별자리들의 고유한 별 좌표 데이터베이스를 바탕으로,
+    사용자가 입력하거나 그린 별의 위치와 패턴을 분석하여 어떤 별자리인지 판별해 주는 웹 서비스입니다.
+    
+    아래 좌표평면은 우리 서비스가 인식하는 황도 12궁 별자리들의 핵심 별 위치를 나타낸 지도입니다.
+    """)
+
+  # 별도의 이미지 업로드 없이 실시간으로 좌표평면 그리기
+  fig, ax = plt.subplots(figsize=(7, 7), facecolor="#0E1117")
+  ax.set_facecolor("#0E1117")
+
+  for name, coords in constellation_db.items():
+    xs = [p[0] for p in coords]
+    ys = [p[1] for p in coords]
+    ax.plot(
+        xs,
+        ys,
+        marker="o",
+        linestyle="-",
+        linewidth=1.2,
+        markersize=5,
+        label=name.split()[0],
+    )
+
+  ax.set_xlim(-1.2, 1.2)
+  ax.set_ylim(-1.2, 1.2)
+  ax.axhline(0, color="#444444", linewidth=0.8, linestyle="--")
+  ax.axvline(0, color="#444444", linewidth=0.8, linestyle="--")
+  ax.tick_params(colors="white")
+  ax.set_title(
+      "Zodiac Constellations Map", color="white", fontsize=12, pad=10
+  )
+  ax.legend(
+      loc="upper right",
+      fontsize=8,
+      ncol=2,
+      facecolor="#1E2129",
+      edgecolor="none",
+      labelcolor="white",
+  )
+
+  st.pyplot(fig)  # 화면에 그려진 그래프 출력
+
+  st.divider()
+  st.info(
+      "👉 좌측 메뉴나 큐샵 버튼을 통해 **좌표 직접 입력, 인터랙티브 캔버스,"
+      " 사진 업로드** 중 원하는 방법으로 나의 별자리를 찾아보세요!"
+  )
+
+# --- 1. 좌표 직접 입력 ---
+elif mode == "좌표 직접 입력":
   st.subheader("📝 방법 1: 좌표 직접 입력하기")
   st.write(
       "아래 형식에 맞게 좌표를 입력해주세요."
@@ -507,14 +566,14 @@ if mode == "좌표 직접 입력":
             f" 입력해주세요): {err}"
         )
 
+# --- 2. 인터랙티브 캔버스 ---
 elif mode == "인터랙티브 캔버스":
   st.subheader("🖱️ 방법 2: 캔버스에 별 그려서 찍기")
   st.write(
       "아래 검은 도화지 위를 마우스로 별을 그려보세요!"
-      "별자리가 판별됩니다!"
+      " 별자리가 판별됩니다!"
   )
 
-  # 버튼 없이 클릭하는 순간 바로 반영되도록 설정한 캔버스
   canvas_result = st_canvas(
       fill_color="#FFA500",
       stroke_width=10,
@@ -543,6 +602,7 @@ elif mode == "인터랙티브 캔버스":
       )
       user_stars = canvas_stars
 
+# --- 3. 사진 업로드 ---
 elif mode == "사진 업로드":
   st.subheader("🖼️ 방법 3: 사진 업로드 및 분석")
   uploaded_file = st.file_uploader(
@@ -566,6 +626,7 @@ elif mode == "사진 업로드":
       except Exception as e:
         st.error(f"이미지 처리 중 오류 발생: {e}")
 
+# --- 공통 판별 결과 출력 영역 ---
 if user_stars:
   result, error_val = predict_constellation(user_stars)
   st.divider()
