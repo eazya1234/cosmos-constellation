@@ -487,33 +487,52 @@ mode = st.sidebar.radio(
 
 user_stars = []
 
-# --- 0. 홈 / 사이트 소개 페이지 (실시간 그래프 생성 방식) ---
+# --- 0. 홈 / 사이트 소개 페이지 (깔끔한 별점 및 좌표 표시 + 이용 방법) ---
 if mode == "✨ 홈 / 사이트 소개":
   st.title("🌌 cosmos_finding constellations")
-  st.subheader("밤하늘의 별자리 패턴을 찾고 탐색하는 공간입니다.")
+  st.markdown(
+      "**황도 12궁 별자리**의 좌표 패턴을 분석하여 어떤 별자리인지 판별해"
+      " 주는 탐색 공간입니다."
+  )
 
-  st.write("""
-    **cosmos** 프로젝트는 황도 12궁 별자리들의 고유한 별 좌표 데이터베이스를 바탕으로,
-    사용자가 입력하거나 그린 별의 위치와 패턴을 분석하여 어떤 별자리인지 판별해 주는 웹 서비스입니다.
-    
-    아래 좌표평면은 우리 서비스가 인식하는 황도 12궁 별자리들의 핵심 별 위치를 나타낸 지도입니다.
+  st.divider()
+
+  # 사이트 이용 방법 간결하게 추가
+  st.markdown("### 📌 사이트 이용 방법")
+  st.markdown("""
+    1. **좌표 직접 입력**: 별들의 $(x, y)$ 좌표를 띄어쓰기로 직접 입력하여 판별합니다.
+    2. **인터랙티브 캔버스**: 캔버스 화면에 마우스로 별을 직접 찍어 실시간으로 확인합니다.
+    3. **사진 업로드**: 별자리를 그린 손그림 이미지를 업로드하여 자동으로 분석합니다.
     """)
 
-  # 별도의 이미지 업로드 없이 실시간으로 좌표평면 그리기
+  st.divider()
+  st.markdown("### 🗺️ 황도 12궁 별 좌표 지도")
+
+  # 2번 이미지 스타일: 선 없이 별 모양 포인트와 좌표만 깔끔하게 표시 (한글 범례 제거로 폰트 깨짐 방지)
   fig, ax = plt.subplots(figsize=(7, 7), facecolor="#0E1117")
   ax.set_facecolor("#0E1117")
 
+  # 모든 고유 좌표 수집
+  all_stars = set()
   for name, coords in constellation_db.items():
-    xs = [p[0] for p in coords]
-    ys = [p[1] for p in coords]
-    ax.plot(
-        xs,
-        ys,
-        marker="o",
-        linestyle="-",
-        linewidth=1.2,
-        markersize=5,
-        label=name.split()[0],
+    for p in coords:
+      all_stars.add(p)
+
+  xs = [p[0] for p in all_stars]
+  ys = [p[1] for p in all_stars]
+
+  # 별 모양(산개) 마커로 점 찍기
+  ax.scatter(xs, ys, marker="*", color="white", s=120, edgecolors="#88bbff")
+
+  # 각 좌표 옆에 (x, y) 텍스트 표시
+  for x, y in all_stars:
+    ax.text(
+        x + 0.02,
+        y + 0.02,
+        f"({x}, {y})",
+        color="#cccccc",
+        fontsize=6.5,
+        alpha=0.85,
     )
 
   ax.set_xlim(-1.2, 1.2)
@@ -521,24 +540,14 @@ if mode == "✨ 홈 / 사이트 소개":
   ax.axhline(0, color="#444444", linewidth=0.8, linestyle="--")
   ax.axvline(0, color="#444444", linewidth=0.8, linestyle="--")
   ax.tick_params(colors="white")
-  ax.set_title(
-      "Zodiac Constellations Map", color="white", fontsize=12, pad=10
-  )
-  ax.legend(
-      loc="upper right",
-      fontsize=8,
-      ncol=2,
-      facecolor="#1E2129",
-      edgecolor="none",
-      labelcolor="white",
-  )
+  ax.set_xlabel("x", color="white")
+  ax.set_ylabel("y", color="white")
 
-  st.pyplot(fig)  # 화면에 그려진 그래프 출력
+  st.pyplot(fig)
 
-  st.divider()
   st.info(
-      "👉 좌측 메뉴나 큐샵 버튼을 통해 **좌표 직접 입력, 인터랙티브 캔버스,"
-      " 사진 업로드** 중 원하는 방법으로 나의 별자리를 찾아보세요!"
+      "👉 왼쪽 메뉴나 큐샵 버튼을 통해 원하는 방식을 골라 나만의 별자리를"
+      " 찾아보세요!"
   )
 
 # --- 1. 좌표 직접 입력 ---
