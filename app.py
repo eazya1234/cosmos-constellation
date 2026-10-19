@@ -508,7 +508,7 @@ if mode == "✨ 홈 / 사이트 소개":
   st.divider()
   st.markdown("황도 12궁 별 좌표 지도")
 
-  # 2번 이미지 스타일: 선 없이 별 모양 포인트와 좌표만 깔끔하게 표시 (한글 범례 제거로 폰트 깨짐 방지)
+  # 2번 이미지 스타일: 선 없이 원 모양(o) 포인트와 좌표만 깔끔하게 표시
   fig, ax = plt.subplots(figsize=(7, 7), facecolor="#0E1117")
   ax.set_facecolor("#0E1117")
 
@@ -521,8 +521,8 @@ if mode == "✨ 홈 / 사이트 소개":
   xs = [p[0] for p in all_stars]
   ys = [p[1] for p in all_stars]
 
-  # 별 모양(산개) 마커로 점 찍기
-  ax.scatter(xs, ys, marker="*", color="white", s=120, edgecolors="#88bbff")
+  # 원 모양 마커로 점 찍기 (marker="o"로 변경)
+  ax.scatter(xs, ys, marker="o", color="white", s=80, edgecolors="#88bbff")
 
   # 각 좌표 옆에 (x, y) 텍스트 표시
   for x, y in all_stars:
