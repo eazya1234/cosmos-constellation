@@ -9,7 +9,7 @@ st.set_page_config(
     page_title="황도 12궁 패턴 인식",
     page_icon="✨",
     layout="centered",
-    initial_sidebar_state="expanded",  # 모바일 접속 시 메뉴바를 찾기 쉽게 설정
+    initial_sidebar_state="expanded",
 )
 
 # 1. 황도 12궁 좌표 데이터베이스
@@ -580,7 +580,7 @@ elif mode == "좌표 직접 입력":
             f" 입력해주세요): {err}"
         )
 
-# --- 2. 인터랙티브 캔버스 (모바일/터치 스크린에 맞게 마커 stroke_width 최적화) ---
+# --- 2. 인터랙티브 캔버스 (모바일/터치 스크린 최적화) ---
 elif mode == "인터랙티브 캔버스":
   st.subheader("방법 2: 캔버스에 별 그려서 찍기")
   st.write(
@@ -590,11 +590,11 @@ elif mode == "인터랙티브 캔버스":
 
   canvas_result = st_canvas(
       fill_color="#FFA500",
-      stroke_width=12,  # 손가락 터치 시에도 선명하게 잘 찍히도록 두께 약간 상향
+      stroke_width=12,
       stroke_color="#FFA500",
       background_color="#0E1117",
-      height=380,  # 모바일 화면 비율 고려
-      width=380,  # 모바일 화면 비율 고려
+      height=380,
+      width=380,
       drawing_mode="point",
       key="star_canvas_auto",
   )
@@ -605,7 +605,6 @@ elif mode == "인터랙티브 캔버스":
     for obj in objects:
       cx = obj.get("left", 0)
       cy = obj.get("top", 0)
-      # 380px 규격에 맞춰 좌표 정규화
       nx = (cx - 190) / 190.0
       ny = -(cy - 190) / 190.0
       canvas_stars.append((nx, ny))
