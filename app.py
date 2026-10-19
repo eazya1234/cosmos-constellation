@@ -441,19 +441,30 @@ def predict_constellation(user_stars):
   best_match = None
   min_error = float("inf")
 
+  # 타이트한 판정을 위한 오차 임계값 (이 값을 낮추면 더 엄격하게 판별함)
+  ERROR_THRESHOLD = 0.35
+
   for name, db_coords in constellation_db.items():
     db_norm = normalize_stars(db_coords)
+
+    # 별 개수가 다를 경우 오차에 페널티 부여 (개수 차이당 대폭 가산)
+    count_diff = abs(len(user_norm) - len(db_norm))
 
     total_dist = 0
     for u in user_norm:
       closest_dist = min(math.hypot(u[0] - d[0], u[1] - d[1]) for d in db_norm)
       total_dist += closest_dist
 
-    avg_error = total_dist / len(user_norm)
+    # 평균 거리 오차 + 개수 불일치 페널티
+    avg_error = (total_dist / len(user_norm)) + (count_diff * 0.2)
 
     if avg_error < min_error:
       min_error = avg_error
       best_match = name
+
+  # 오차가 너무 크면(정확도가 떨어지면) 일치하는 별자리가 없는 것으로 처리
+  if min_error > ERROR_THRESHOLD:
+    return None, min_error
 
   return best_match, min_error
 
@@ -487,7 +498,7 @@ mode = st.sidebar.radio(
 
 user_stars = []
 
-# --- 0. 홈 / 사이트 소개 페이지 (깔끔한 별점 및 좌표 표시 + 이용 방법) ---
+# --- 0. 홈 / 사이트 소개 페이지 (깔끔한 원형 마커 + 좌표 표시 + 이용 방법) ---
 if mode == "✨ 홈 / 사이트 소개":
   st.title("🌌 cosmos_finding constellations")
   st.markdown(
@@ -521,7 +532,7 @@ if mode == "✨ 홈 / 사이트 소개":
   xs = [p[0] for p in all_stars]
   ys = [p[1] for p in all_stars]
 
-  # 원 모양 마커로 점 찍기 (marker="o"로 변경)
+  # 원 모양 마커로 점 찍기
   ax.scatter(xs, ys, marker="o", color="white", s=80, edgecolors="#88bbff")
 
   # 각 좌표 옆에 (x, y) 텍스트 표시
