@@ -498,7 +498,7 @@ if mode == "✨ 홈 / 사이트 소개":
   st.divider()
 
   # 사이트 이용 방법 간결하게 추가
-  st.markdown("### 📌 사이트 이용 방법")
+  st.markdown("사이트 이용 방법")
   st.markdown("""
     1. **좌표 직접 입력**: 별들의 $(x, y)$ 좌표를 띄어쓰기로 직접 입력하여 판별합니다.
     2. **인터랙티브 캔버스**: 캔버스 화면에 마우스로 별을 직접 찍어 실시간으로 확인합니다.
@@ -506,7 +506,7 @@ if mode == "✨ 홈 / 사이트 소개":
     """)
 
   st.divider()
-  st.markdown("### 🗺️ 황도 12궁 별 좌표 지도")
+  st.markdown("황도 12궁 별 좌표 지도")
 
   # 2번 이미지 스타일: 선 없이 별 모양 포인트와 좌표만 깔끔하게 표시 (한글 범례 제거로 폰트 깨짐 방지)
   fig, ax = plt.subplots(figsize=(7, 7), facecolor="#0E1117")
@@ -546,13 +546,13 @@ if mode == "✨ 홈 / 사이트 소개":
   st.pyplot(fig)
 
   st.info(
-      "👉 왼쪽 메뉴나 큐샵 버튼을 통해 원하는 방식을 골라 나만의 별자리를"
+      "왼쪽 메뉴를 통해 원하는 방식을 골라 나만의 별자리를"
       " 찾아보세요!"
   )
 
 # --- 1. 좌표 직접 입력 ---
 elif mode == "좌표 직접 입력":
-  st.subheader("📝 방법 1: 좌표 직접 입력하기")
+  st.subheader("방법 1: 좌표 직접 입력하기")
   st.write(
       "아래 형식에 맞게 좌표를 입력해주세요."
       " 자세한 좌표평면은 홈페이지에서 확인 가능합니다!"
@@ -577,7 +577,7 @@ elif mode == "좌표 직접 입력":
 
 # --- 2. 인터랙티브 캔버스 ---
 elif mode == "인터랙티브 캔버스":
-  st.subheader("🖱️ 방법 2: 캔버스에 별 그려서 찍기")
+  st.subheader("방법 2: 캔버스에 별 그려서 찍기")
   st.write(
       "아래 검은 도화지 위를 마우스로 별을 그려보세요!"
       " 별자리가 판별됩니다!"
@@ -613,7 +613,7 @@ elif mode == "인터랙티브 캔버스":
 
 # --- 3. 사진 업로드 ---
 elif mode == "사진 업로드":
-  st.subheader("🖼️ 방법 3: 사진 업로드 및 분석")
+  st.subheader("방법 3: 사진 업로드 및 분석")
   uploaded_file = st.file_uploader(
       "별자리를 그린 이미지를 업로드하세요 (JPG, PNG)", type=["jpg", "jpeg", "png"]
   )
@@ -641,7 +641,7 @@ if user_stars:
   st.divider()
   if result:
     st.success(f"✨ 판별 결과: 이 별자리는 **{result}** 입니다!")
-    st.write(f"🔍 패턴 오차율 수치: `{error_val:.4f}`")
+    st.write(f"패턴 오차율 수치: `{error_val:.4f}`")
 
     info = constellation_info_db[result]
     st.markdown(f"### 🌌 {result} 상세 정보")
@@ -652,6 +652,6 @@ if user_stars:
     st.markdown(f"- **여담 및 관측 정보:** {info['trivia']}")
   else:
     st.error(
-        "❌ 일치하는 별자리를 찾지 못했습니다. 별의 개수나 입력 상태를"
+        "일치하는 별자리를 찾지 못했습니다. 별의 개수나 입력 상태를"
         " 확인해주세요."
     )
